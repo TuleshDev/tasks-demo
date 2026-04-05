@@ -2,17 +2,23 @@ import { ref } from 'vue'
 
 const token = ref<string | null>(null)
 const isAuthenticated = ref(false)
-const user = ref<{ username: string } | null>(null)
+const user = ref<{ id: number; email: string; role: 'admin' | 'user' } | null>(null)
 
-function setAuth(newToken: string, username?: string) {
+async function setAuth(newToken: string, email?: string) {
   token.value = newToken
   isAuthenticated.value = true
-  if (username) {
-    user.value = { username }
-    if (process.client) {
-      localStorage.setItem('user', JSON.stringify(user.value))
+
+  if (email) {
+    const res = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`)
+    if (res.ok) {
+      const u = await res.json()
+      user.value = u
+      if (process.client) {
+        localStorage.setItem('user', JSON.stringify(user.value))
+      }
     }
   }
+
   if (process.client) {
     localStorage.setItem('auth_token', newToken)
   }

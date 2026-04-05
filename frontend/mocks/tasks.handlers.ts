@@ -6,8 +6,8 @@ import { getUserFromAuthHeader } from '../utils/auth'
 let lastId = tasks.length
 
 export const taskHandlers = [
-  http.get('/api/tasks', ({ request }) => {
-    const user = getUserFromAuthHeader(request.headers.get('authorization'))
+  http.get('/api/tasks', async ({ request }) => {
+    const user = await getUserFromAuthHeader(request.headers.get('authorization'))
     if (!user) return HttpResponse.json(null, { status: 401 })
 
     const url = new URL(request.url)
@@ -52,11 +52,15 @@ export const taskHandlers = [
       ExecutorPhoto: task.ExecutorPhoto || '/uploads/default.png'
     }))
 
+    if (paginated.length === 0) {
+      return HttpResponse.json({ data: [], total, page, limit, message: 'Результаты не найдены' })
+    }
+
     return HttpResponse.json({ data: paginated, total, page, limit })
   }),
 
   http.post('/api/tasks', async ({ request }) => {
-    const user = getUserFromAuthHeader(request.headers.get('authorization'))
+    const user = await getUserFromAuthHeader(request.headers.get('authorization'))
     if (!user) return HttpResponse.json(null, { status: 401 })
 
     const body = await request.json()
@@ -76,56 +80,13 @@ export const taskHandlers = [
 
     tasks.push(task)
 
-    const url = new URL(request.url)
-    const status = url.searchParams.get('status') || 'all'
-    const search = url.searchParams.get('search') || ''
-    const sort = url.searchParams.get('sort') || ''
-    const page = parseInt(url.searchParams.get('page') || '1', 10)
-    const limit = parseInt(url.searchParams.get('limit') || '10', 10)
-
-    let filtered = tasks
-
-    if (status === 'active') {
-      filtered = filtered.filter(t => !t.IsCompleted)
-    } else if (status === 'completed') {
-      filtered = filtered.filter(t => t.IsCompleted)
-    }
-
-    if (search) {
-      const s = search.toLowerCase()
-      filtered = filtered.filter(
-        t =>
-          t.Title.toLowerCase().includes(s) ||
-          t.Description.toLowerCase().includes(s)
-      )
-    }
-
-    if (sort === 'dateAsc') {
-      filtered = filtered.sort((a, b) => new Date(a.DueDate).getTime() - new Date(b.DueDate).getTime())
-    } else if (sort === 'dateDesc') {
-      filtered = filtered.sort((a, b) => new Date(b.DueDate).getTime() - new Date(a.DueDate).getTime())
-    } else if (sort === 'title') {
-      filtered = filtered.sort((a, b) => a.Title.localeCompare(b.Title))
-    } else if (sort === 'priority') {
-      filtered = filtered.sort((a, b) => a.Priority.localeCompare(b.Priority))
-    }
-
-    const index = filtered.findIndex(t => t.Id === task.Id)
-    let pageForNewTask = null
-    if (index !== -1) {
-      pageForNewTask = Math.floor(index / limit) + 1
-    }
-
-    return HttpResponse.json({ 
-      ...task, 
-      DueDate: new Date(task.DueDate).toISOString().split('T')[0], 
-      pageForNewTask, 
-      page, 
-      limit 
-    }, { status: 201 })
+    return HttpResponse.json(task, { status: 201 })
   }),
 
   http.put('/api/tasks/:id', async ({ params, request }) => {
+    const user = await getUserFromAuthHeader(request.headers.get('authorization'))
+    if (!user) return HttpResponse.json(null, { status: 401 })
+
     const body = await request.json()
     const id = Number(params.id)
     const index = tasks.findIndex(t => t.Id === id)
@@ -137,16 +98,19 @@ export const taskHandlers = [
       }
       return HttpResponse.json(tasks[index])
     }
-    return HttpResponse.json({ error: 'Task not found' }, { status: 404 })
+    return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
   }),
 
-  http.delete('/api/tasks/:id', ({ params }) => {
+  http.delete('/api/tasks/:id', async ({ params, request }) => {
+    const user = await getUserFromAuthHeader(request.headers.get('authorization'))
+    if (!user) return HttpResponse.json(null, { status: 401 })
+
     const id = Number(params.id)
     const index = tasks.findIndex(t => t.Id === id)
     if (index !== -1) {
       tasks.splice(index, 1)
       return HttpResponse.json({ success: true })
     }
-    return HttpResponse.json({ error: 'Task not found' }, { status: 404 })
+    return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
   }),
 ]

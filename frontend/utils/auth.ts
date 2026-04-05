@@ -1,8 +1,11 @@
-import { users } from '../data/users.data'
-
-export function getUserFromAuthHeader(auth?: string) {
+export async function getUserFromAuthHeader(auth?: string) {
   if (!auth) return null
-  const token = auth.replace('Bearer ', '')
-  const userId = Number(token)
-  return users.find(u => u.id === userId) || null
+  try {
+    const user = await $fetch('/api/auth/me', {
+      headers: { Authorization: auth }
+    })
+    return user
+  } catch {
+    return null
+  }
 }

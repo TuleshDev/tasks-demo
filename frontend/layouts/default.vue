@@ -1,8 +1,11 @@
 <template>
   <div>
+    <Notification />
+
     <header v-if="$route.path !== '/login'" class="flex justify-end p-4 bg-gray-100">
       <UserMenu />
     </header>
+
     <main>
       <slot />
     </main>
@@ -11,4 +14,5 @@
 
 <script setup>
 import UserMenu from '~/components/UserMenu.vue'
+import Notification from '~/components/Notification.vue'
 </script>

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+import { useNuxtApp } from '#app'
+import debounce from 'lodash.debounce'
 
 definePageMeta({
   middleware: 'auth'
 })
+
+const { $fetch } = useNuxtApp()
 
 const { token, isAuthenticated, loadAuth } = useAuth()
 const tasks = ref<any[]>([])
@@ -15,6 +19,8 @@ const total = ref(0)
 
 const filter = ref<'all' | 'active' | 'completed'>('all')
 const search = ref('')
+const loading = ref(false)
+const notFound = ref(false)
 const sort = ref<'dateAsc' | 'dateDesc' | 'title' | 'priority'>('dateAsc')
 
 const showCreateForm = ref(false)
@@ -29,12 +35,15 @@ const form = ref<any>({
   ExecutorFirstName: '',
   ExecutorLastName: '',
   ExecutorEmail: '',
-  ExecutorPhoto: '',
+  ExecutorPhoto: '/uploads/default.png',
   Priority: 'Обычный'
 })
 
-const isAdmin = ref(true)
-const currentUserId = ref(1)
+const { user } = useAuth()
+
+function canManage(task) {
+  return user.value?.role === 'admin' || task.OwnerId === user.value?.id
+}
 
 function formatDate(dateString: string) {
   const date = new Date(dateString)
@@ -44,6 +53,9 @@ function formatDate(dateString: string) {
 async function fetchTasks() {
   if (!token.value) return
   try {
+    loading.value = true
+    notFound.value = false
+    error.value = null
     const data: any = await $fetch('/api/tasks', {
       headers: { Authorization: `Bearer ${token.value}` },
       query: {
@@ -56,10 +68,24 @@ async function fetchTasks() {
     })
     tasks.value = data?.data || []
     total.value = data?.total || 0
-  } catch (err) {
-    error.value = err
+    if (tasks.value.length === 0) {
+      notFound.value = true
+    }
+  } catch (e: any) {
+    error.value = e?.message || 'Ошибка загрузки задач'
+  } finally {
+    loading.value = false
   }
 }
+
+const debouncedFetch = debounce(() => {
+  page.value = 1
+  fetchTasks()
+}, 400)
+
+watch(search, () => {
+  debouncedFetch()
+})
 
 async function createTask() {
   try {
@@ -151,7 +177,7 @@ function onFileSelected(event) {
   }
 }
 
-watch([filter, search, sort], () => {
+watch([filter, sort], () => {
   page.value = 1
   fetchTasks()
 })
@@ -189,8 +215,15 @@ onMounted(async () => {
           <option value="priority">По приоритету</option>
         </select>
       </div>
-      <div v-if="error" class="text-red-500 mb-4 text-center">Ошибка загрузки задач</div>
+      <div v-if="error" class="error">
+        <p>{{ error }}</p>
+        <button @click="fetchTasks">Повторить</button>
+      </div>
       <div v-else>
+        <div v-if="loading" class="flex justify-center py-4">
+          <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <div v-else-if="notFound">Результаты не найдены</div>
         <div class="overflow-x-auto">
           <table class="w-full text-left border border-gray-200 rounded-lg">
             <thead>
@@ -229,10 +262,10 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td class="px-4 py-2 space-x-2">
-                  <button v-if="isAdmin || task.OwnerId === currentUserId"
+                  <button v-if="canManage(task)"
                           @click="openEditForm(task)"
                           class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Редактировать</button>
-                  <button v-if="isAdmin || task.OwnerId === currentUserId"
+                  <button v-if="canManage(task)"
                           @click="deleteTask(task.Id)"
                           class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">Удалить</button>
                 </td>
@@ -323,3 +356,10 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.error {
+  color: red;
+  padding: 1rem;
+}
+</style>

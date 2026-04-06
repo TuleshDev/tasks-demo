@@ -1,19 +1,7 @@
-using System;
-using System.ComponentModel.DataAnnotations;
-
-namespace Backend.Models
+namespace Backend.DTOs
 {
-    public enum TaskPriority
+    public class CreateTaskDto
     {
-        Normal,
-        Important
-    }
-
-    public class TaskItem
-    {
-        [Key]
-        public int Id { get; set; }
-
         public required string Title { get; set; }
 
         public required string Description { get; set; }
@@ -23,13 +11,12 @@ namespace Backend.Models
         public bool IsCompleted { get; set; }
 
         public int OwnerId { get; set; }
-        public User Owner { get; set; } = null!;
 
         public required string ExecutorFirstName { get; set; }
         public required string ExecutorLastName { get; set; }
         public required string ExecutorEmail { get; set; }
         public string? ExecutorPhoto { get; set; }
 
-        public TaskPriority Priority { get; set; }
+        public required string Priority { get; set; }
     }
 }

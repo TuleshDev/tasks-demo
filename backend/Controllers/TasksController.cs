@@ -71,9 +71,9 @@ namespace Backend.Controllers
 
         // POST: /api/tasks
         [HttpPost]
-        public async Task<ActionResult<TaskDto>> CreateTask([FromBody] TaskDto dto)
+        public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto dto)
         {
-            var task = new TaskItem
+            var entry = await _context.Tasks.AddAsync(new TaskItem
             {
                 Title = dto.Title,
                 Description = dto.Description,
@@ -85,12 +85,11 @@ namespace Backend.Controllers
                 ExecutorLastName = dto.ExecutorLastName,
                 ExecutorEmail = dto.ExecutorEmail,
                 ExecutorPhoto = dto.ExecutorPhoto ?? "/uploads/default.png"
-            };
+            });
 
-            _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetTasks), new { id = task.Id }, DtoMapper.ToDto(task));
+            return CreatedAtAction(nameof(GetTasks), new { id = entry.Entity.Id }, DtoMapper.ToDto(entry.Entity));
         }
 
         // PUT: /api/tasks/{id}

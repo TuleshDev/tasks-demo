@@ -121,9 +121,15 @@ async function createTask() {
   try {
     const config = useRuntimeConfig()
 
+    const { Id, ...rest } = form.value
+    const dto = {
+      ...rest,
+      OwnerId: user.value?.id
+    }
+
     const data: any = await $fetch(`${config.public.apiUrl}/api/tasks`, {
       method: 'POST',
-      body: form.value,
+      body: dto,
       headers: { Authorization: `Bearer ${token.value}` },
     })
 

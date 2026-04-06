@@ -36,7 +36,7 @@ npm run build:prod && npm run preview:prod
 
 В Dev‑режиме можно разрабатывать интерфейс без запуска бэкенда. В Prod‑режиме фронт общается с реальным сервером.
 
-# Бэкенд
+## Бэкенд
 
 Бэкенд запускается так:
 
@@ -86,7 +86,7 @@ USE_MSW=false
 
 ``` bash
 "ConnectionStrings": {
-  "DefaultConnection": "Host=localhost;Port=5432;Database=tasksdb;Username=postgres;Password=yourpassword"
+  "DefaultConnection": "Host=localhost;Port=5432;Database=tasksdb;Username=postgres;Password=password"
 }
 ```
 

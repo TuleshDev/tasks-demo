@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+import { mapTask } from '~/utils/mappers'
 import { useNuxtApp } from '#app'
 import debounce from 'lodash.debounce'
 
@@ -50,13 +51,42 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function normalizeDueDate(dateString: string): string {
+  if (!dateString) return ''
+  return new Date(dateString).toISOString().split('T')[0]
+}
+
+function normalizeTasks(data: any, useMocks: boolean): Task[] {
+  if (!data?.data) return []
+  if (useMocks) {
+    return data.data as Task[]
+  }
+  return data.data.map(raw => {
+    const task = mapTask(raw)
+    return {
+      ...task,
+      DueDate: normalizeDueDate(raw.dueDate)
+    }
+  })
+}
+
+function normalizeTask(raw: any): Task {
+  const task = mapTask(raw)
+  return {
+    ...task,
+    DueDate: normalizeDueDate(raw.dueDate)
+  }
+}
+
 async function fetchTasks() {
   if (!token.value) return
   try {
     loading.value = true
     notFound.value = false
     error.value = null
-    const data: any = await $fetch('/api/tasks', {
+    const config = useRuntimeConfig()
+
+    const data: any = await $fetch(`${config.public.apiUrl}/api/tasks`, {
       headers: { Authorization: `Bearer ${token.value}` },
       query: {
         page: page.value.toString(),
@@ -66,7 +96,7 @@ async function fetchTasks() {
         sort: sort.value,
       },
     })
-    tasks.value = data?.data || []
+    tasks.value = normalizeTasks(data, config.public.useMsw)
     total.value = data?.total || 0
     if (tasks.value.length === 0) {
       notFound.value = true
@@ -89,12 +119,15 @@ watch(search, () => {
 
 async function createTask() {
   try {
-    const data: any = await $fetch('/api/tasks', {
+    const config = useRuntimeConfig()
+
+    const data: any = await $fetch(`${config.public.apiUrl}/api/tasks`, {
       method: 'POST',
       body: form.value,
       headers: { Authorization: `Bearer ${token.value}` },
     })
-    tasks.value.push(data)
+
+    tasks.value.push(normalizeTask(data))
     closeForm()
   } catch (err) {
     error.value = err
@@ -103,13 +136,18 @@ async function createTask() {
 
 async function saveEditTask() {
   try {
-    const updated: any = await $fetch(`/api/tasks/${form.value.Id}`, {
+    const config = useRuntimeConfig()
+
+    const updated: any = await $fetch(`${config.public.apiUrl}/api/tasks/${form.value.Id}`, {
       method: 'PUT',
       body: form.value,
       headers: { Authorization: `Bearer ${token.value}` },
     })
+
     const idx = tasks.value.findIndex(t => t.Id === form.value.Id)
-    tasks.value[idx] = updated
+    if (idx !== -1) {
+      tasks.value[idx] = normalizeTask(updated)
+    }
     closeForm()
   } catch (err) {
     error.value = err
@@ -141,7 +179,9 @@ function closeForm() {
 
 async function deleteTask(id: number) {
   try {
-    await $fetch(`/api/tasks/${id}`, {
+    const config = useRuntimeConfig()
+
+    await $fetch(`${config.public.apiUrl}/api/tasks/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token.value}` },
     })

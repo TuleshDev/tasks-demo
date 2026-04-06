@@ -1,9 +1,15 @@
 export default async () => {
-  if (process.env.NODE_ENV !== 'development') return
+  const config = useRuntimeConfig()
 
-  const { worker } = await import('~/mocks/browser')
+  if (config.public.useMsw) {
+    const { worker } = await import('~/mocks/browser')
 
-  await worker.start({
-    onUnhandledRequest: 'bypass',
-  })
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+    })
+
+    console.log('MSW запущен')
+  } else {
+    console.log('MSW отключён, работаем с реальным API')
+  }
 }

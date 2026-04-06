@@ -3,10 +3,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "npm run env:dev && nuxt dev",
+    "build:dev": "npm run env:dev && nuxt build",
+    "preview:dev": "npm run env:dev && nuxt preview",
+    "build:prod": "npm run env:prod && nuxt build",
+    "preview:prod": "npm run env:prod && nuxt preview",
+    "env:dev": "copy .env.development .env",
+    "env:prod": "copy .env.production .env",
     "generate": "nuxt generate",
-    "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {

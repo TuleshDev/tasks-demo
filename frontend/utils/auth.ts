@@ -1,7 +1,9 @@
 export async function getUserFromAuthHeader(auth?: string) {
   if (!auth) return null
   try {
-    const user = await $fetch('/api/auth/me', {
+    const config = useRuntimeConfig()
+
+    const user = await $fetch(`${config.public.apiUrl}/api/auth/me`, {
       headers: { Authorization: auth }
     })
     return user

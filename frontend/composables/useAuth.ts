@@ -9,7 +9,9 @@ async function setAuth(newToken: string, email?: string) {
   isAuthenticated.value = true
 
   if (email) {
-    const res = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`)
+    const config = useRuntimeConfig()
+
+    const res = await fetch(`${config.public.apiUrl}/api/users/by-email?email=${encodeURIComponent(email)}`)
     if (res.ok) {
       const u = await res.json()
       user.value = u

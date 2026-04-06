@@ -3,6 +3,12 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   telemetry: false,
   modules: ['@nuxtjs/tailwindcss'],
+  runtimeConfig: {
+    public: {
+      apiUrl: process.env.API_URL,
+      useMsw: process.env.USE_MSW === 'true'
+    }
+  },
   vite: {
     optimizeDeps: {
       include: [

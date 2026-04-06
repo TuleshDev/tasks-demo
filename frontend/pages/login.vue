@@ -53,7 +53,9 @@ async function handleLogin() {
   loading.value = true
   error.value = null
   try {
-    const data = await $fetch('/api/auth/login', {
+    const config = useRuntimeConfig()
+
+    const data = await $fetch(`${config.public.apiUrl}/api/auth/login`, {
       method: 'POST',
       body: {
         email: email.value,
@@ -64,7 +66,7 @@ async function handleLogin() {
     if (data?.token) {
       const token = data.token
 
-      const res = await $fetch(`/api/users/by-email?email=${encodeURIComponent(email.value)}`)
+      const res = await $fetch(`${config.public.apiUrl}/api/users/by-email?email=${encodeURIComponent(email.value)}`)
       if (res) {
         setAuth(token, res.email)
 

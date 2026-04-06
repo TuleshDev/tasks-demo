@@ -70,11 +70,15 @@ function normalizeTasks(data: any, useMocks: boolean): Task[] {
   })
 }
 
-function normalizeTask(raw: any): Task {
-  const task = mapTask(raw)
-  return {
-    ...task,
-    DueDate: normalizeDueDate(raw.dueDate)
+function normalizeTask(raw: any, useMocks: boolean): Task {
+  if (useMocks) {
+    return raw
+  } else {
+    const task = mapTask(raw)
+    return {
+      ...task,
+      DueDate: normalizeDueDate(raw.dueDate)
+    }
   }
 }
 
@@ -133,7 +137,7 @@ async function createTask() {
       headers: { Authorization: `Bearer ${token.value}` },
     })
 
-    tasks.value.push(normalizeTask(data))
+    tasks.value.push(normalizeTask(data, config.public.useMsw))
     closeForm()
   } catch (err) {
     error.value = err
@@ -152,7 +156,7 @@ async function saveEditTask() {
 
     const idx = tasks.value.findIndex(t => t.Id === form.value.Id)
     if (idx !== -1) {
-      tasks.value[idx] = normalizeTask(updated)
+      tasks.value[idx] = normalizeTask(updated, config.public.useMsw)
     }
     closeForm()
   } catch (err) {

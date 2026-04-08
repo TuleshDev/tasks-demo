@@ -18,7 +18,7 @@
                  class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
         </div>
         <div class="flex items-center">
-          <input v-model="rememberMe" type="checkbox"
+          <input id="rememberMe" type="checkbox" v-model="rememberMe"
                  class="h-4 w-4 text-blue-600 border-gray-300 rounded"/>
           <label class="ml-2 text-gray-700">Запомнить меня</label>
         </div>
@@ -26,17 +26,18 @@
                 class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
           Войти
         </button>
+
       </form>
       <div v-if="error" class="error">
         <p>{{ error }}</p>
-        <button @click="login">Повторить</button>
+        <button @click="handleLogin">Повторить</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '~/composables/useAuth'
 import { useNuxtApp } from '#app'
@@ -47,7 +48,12 @@ const rememberMe = ref(false)
 const loading = ref(false)
 const error = ref<any>(null)
 const router = useRouter()
-const { setAuth } = useAuth()
+
+const auth = useAuth()
+
+onMounted(() => {
+  rememberMe.value = auth.rememberMe.value
+})
 
 async function handleLogin() {
   loading.value = true
@@ -66,18 +72,10 @@ async function handleLogin() {
     if (data?.token) {
       const token = data.token
 
-      const res = await $fetch(`${config.public.apiUrl}/api/users/by-email?email=${encodeURIComponent(email.value)}`)
-      if (res) {
-        setAuth(token, res.email)
+      auth.rememberMe.value = rememberMe.value
+      await auth.setAuth(token, email.value)
 
-        if (rememberMe.value) {
-          localStorage.setItem('user', JSON.stringify(res))
-        } else {
-          sessionStorage.setItem('user', JSON.stringify(res))
-        }
-
-        router.push('/')
-      }
+      router.push('/')
     }
   } catch (e: any) {
     error.value = e?.data?.error || 'Ошибка авторизации'

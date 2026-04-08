@@ -1,10 +1,11 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTOs;
 using Backend.Models;
 using Backend.Mapping;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers
 {
@@ -46,8 +47,10 @@ namespace Backend.Controllers
 
             query = sort switch
             {
-                "dateAsc" => query.OrderBy(t => t.DueDate),
-                "dateDesc" => query.OrderByDescending(t => t.DueDate),
+                "createdAtAsc" => query.OrderBy(t => t.CreatedAt),
+                "createdAtDesc" => query.OrderByDescending(t => t.CreatedAt),
+                "dueDateAsc" => query.OrderBy(t => t.DueDate),
+                "dueDateDesc" => query.OrderByDescending(t => t.DueDate),
                 "title" => query.OrderBy(t => t.Title),
                 "priority" => query.OrderBy(t => t.Priority),
                 _ => query
@@ -71,16 +74,32 @@ namespace Backend.Controllers
 
         // POST: /api/tasks
         [HttpPost]
+        [Authorize]
         public async Task<ActionResult<TaskDto>> CreateTask([FromBody] CreateTaskDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized();
+            }
+
+            int userId = int.Parse(userIdClaim);
+
+            var currentUser = await _context.Users.FindAsync(userId);
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             var entry = await _context.Tasks.AddAsync(new TaskItem
             {
                 Title = dto.Title,
                 Description = dto.Description,
+                CreatedAt = DateTime.UtcNow,
                 DueDate = dto.DueDate.ToUniversalTime(),
                 Priority = dto.Priority == "Важно" ? TaskPriority.Important : TaskPriority.Normal,
                 IsCompleted = false,
-                OwnerId = dto.OwnerId,
+                OwnerId = currentUser.Id,
                 ExecutorFirstName = dto.ExecutorFirstName,
                 ExecutorLastName = dto.ExecutorLastName,
                 ExecutorEmail = dto.ExecutorEmail,
@@ -94,14 +113,35 @@ namespace Backend.Controllers
 
         // PUT: /api/tasks/{id}
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<ActionResult<TaskDto>> UpdateTask(int id, [FromBody] TaskDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized();
+            }
+
+            int userId = int.Parse(userIdClaim);
+
+            var currentUser = await _context.Users.FindAsync(userId);
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             var task = await _context.Tasks.FindAsync(id);
             if (task == null)
                 return NotFound(new { error = "Задача не найдена" });
 
+            if (currentUser.Role != UserRole.Admin && task.OwnerId != currentUser.Id)
+            {
+                return Forbid();
+            }
+
             task.Title = dto.Title;
             task.Description = dto.Description;
+            task.CreatedAt = dto.CreatedAt.ToUniversalTime();
             task.DueDate = dto.DueDate.ToUniversalTime();
             task.Priority = dto.Priority == "Важно" ? TaskPriority.Important : TaskPriority.Normal;
             task.IsCompleted = dto.IsCompleted;
@@ -117,11 +157,31 @@ namespace Backend.Controllers
 
         // DELETE: /api/tasks/{id}
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<ActionResult> DeleteTask(int id)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                return Unauthorized();
+            }
+
+            int userId = int.Parse(userIdClaim);
+
+            var currentUser = await _context.Users.FindAsync(userId);
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             var task = await _context.Tasks.FindAsync(id);
             if (task == null)
                 return NotFound(new { error = "Задача не найдена" });
+
+            if (currentUser.Role != UserRole.Admin && task.OwnerId != currentUser.Id)
+            {
+                return Forbid();
+            }
 
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();

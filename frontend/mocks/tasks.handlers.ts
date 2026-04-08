@@ -34,9 +34,13 @@ export const taskHandlers = [
       )
     }
 
-    if (sort === 'dateAsc') {
+    if (sort === 'createdAtAsc') {
+      filtered = filtered.sort((a, b) => new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime())
+    } else if (sort === 'createdAtDesc') {
+      filtered = filtered.sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime())
+    } else if (sort === 'dueDateAsc') {
       filtered = filtered.sort((a, b) => new Date(a.DueDate).getTime() - new Date(b.DueDate).getTime())
-    } else if (sort === 'dateDesc') {
+    } else if (sort === 'dueDateDesc') {
       filtered = filtered.sort((a, b) => new Date(b.DueDate).getTime() - new Date(a.DueDate).getTime())
     } else if (sort === 'title') {
       filtered = filtered.sort((a, b) => a.Title.localeCompare(b.Title))
@@ -68,6 +72,7 @@ export const taskHandlers = [
       Id: ++lastId,
       Title: body.Title,
       Description: body.Description || '',
+      CreatedAt: new Date().toISOString().split('T')[0],
       DueDate: new Date(body.DueDate).toISOString().split('T')[0],
       Priority: body.Priority || 'Обычный',
       IsCompleted: false,
@@ -90,15 +95,24 @@ export const taskHandlers = [
     const body = await request.json()
     const id = Number(params.id)
     const index = tasks.findIndex(t => t.Id === id)
-    if (index !== -1) {
-      tasks[index] = { 
-        ...tasks[index], 
-        ...body, 
-        DueDate: new Date(body.DueDate).toISOString().split('T')[0] 
-      }
-      return HttpResponse.json(tasks[index])
+
+    if (index === -1) {
+      return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
     }
-    return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
+
+    const task = tasks[index]
+
+    if (user.role !== 'admin' && task.OwnerId !== user.id) {
+      return HttpResponse.json({ error: 'Нет прав для редактирования задачи' }, { status: 403 })
+    }
+
+    tasks[index] = {
+      ...task,
+      ...body,
+      CreatedAt: new Date(body.CreatedAt).toISOString().split('T')[0],
+      DueDate: new Date(body.DueDate).toISOString().split('T')[0]
+    }
+    return HttpResponse.json(tasks[index])
   }),
 
   http.delete('/api/tasks/:id', async ({ params, request }) => {
@@ -107,10 +121,18 @@ export const taskHandlers = [
 
     const id = Number(params.id)
     const index = tasks.findIndex(t => t.Id === id)
-    if (index !== -1) {
-      tasks.splice(index, 1)
-      return HttpResponse.json({ success: true })
+
+    if (index === -1) {
+      return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
     }
-    return HttpResponse.json({ error: 'Задача не найдена' }, { status: 404 })
+
+    const task = tasks[index]
+
+    if (user.role !== 'admin' && task.OwnerId !== user.id) {
+      return HttpResponse.json({ error: 'Нет прав для удаления задачи' }, { status: 403 })
+    }
+
+    tasks.splice(index, 1)
+    return HttpResponse.json({ success: true })
   }),
 ]

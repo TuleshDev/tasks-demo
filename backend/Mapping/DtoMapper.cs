@@ -17,6 +17,7 @@ namespace Backend.Mapping
             Id = task.Id,
             Title = task.Title,
             Description = task.Description,
+            CreatedAt = task.CreatedAt,
             DueDate = task.DueDate,
             IsCompleted = task.IsCompleted,
             OwnerId = task.OwnerId,

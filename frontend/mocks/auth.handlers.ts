@@ -30,7 +30,11 @@ export const authHandlers = [
       return HttpResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return HttpResponse.json(user)
+    return HttpResponse.json({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    })
   }),
 
   http.get('/api/auth/me', ({ request }) => {

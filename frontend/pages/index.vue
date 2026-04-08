@@ -22,7 +22,7 @@ const filter = ref<'all' | 'active' | 'completed'>('all')
 const search = ref('')
 const loading = ref(false)
 const notFound = ref(false)
-const sort = ref<'dateAsc' | 'dateDesc' | 'title' | 'priority'>('dateAsc')
+const sort = ref<'createdAtAsc' | 'createdAtDesc' | 'dueDateAsc' | 'dueDateDesc' | 'title' | 'priority'>('createdAtAsc')
 
 const showCreateForm = ref(false)
 const editTaskData = ref<any|null>(null)
@@ -30,6 +30,7 @@ const form = ref<any>({
   Id: 0,
   Title: '',
   Description: '',
+  CreatedAt: new Date().toISOString().split('T')[0],
   DueDate: '',
   IsCompleted: false,
   OwnerId: 0,
@@ -51,7 +52,7 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function normalizeDueDate(dateString: string): string {
+function normalizeDate(dateString: string): string {
   if (!dateString) return ''
   return new Date(dateString).toISOString().split('T')[0]
 }
@@ -65,7 +66,8 @@ function normalizeTasks(data: any, useMocks: boolean): Task[] {
     const task = mapTask(raw)
     return {
       ...task,
-      DueDate: normalizeDueDate(raw.dueDate)
+      CreatedAt: normalizeDate(raw.createdAt),
+      DueDate: normalizeDate(raw.dueDate)
     }
   })
 }
@@ -77,7 +79,8 @@ function normalizeTask(raw: any, useMocks: boolean): Task {
     const task = mapTask(raw)
     return {
       ...task,
-      DueDate: normalizeDueDate(raw.dueDate)
+      CreatedAt: normalizeDate(raw.createdAt),
+      DueDate: normalizeDate(raw.dueDate)
     }
   }
 }
@@ -128,7 +131,8 @@ async function createTask() {
     const { Id, ...rest } = form.value
     const dto = {
       ...rest,
-      OwnerId: user.value?.id
+      OwnerId: user.value?.id,
+      CreatedAt: new Date().toISOString().split('T')[0]
     }
 
     const data: any = await $fetch(`${config.public.apiUrl}/api/tasks`, {
@@ -176,6 +180,7 @@ function closeForm() {
     Id: 0,
     Title: '',
     Description: '',
+    CreatedAt: '',
     DueDate: '',
     IsCompleted: false,
     OwnerId: 0,
@@ -215,7 +220,7 @@ function setFilter(value: 'all' | 'active' | 'completed') {
 function clearFilters() {
   filter.value = 'all'
   search.value = ''
-  sort.value = 'dateAsc'
+  sort.value = 'createdAtAsc'
   page.value = 1
   fetchTasks()
 }
@@ -259,8 +264,10 @@ onMounted(async () => {
         <input v-model="search" type="text" placeholder="Поиск задач..." class="px-3 py-1 border rounded flex-1" />
         <button @click="clearFilters" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Очистить</button>
         <select v-model="sort" class="px-3 py-1 border rounded">
-          <option value="dateAsc">По дате (возрастание)</option>
-          <option value="dateDesc">По дате (убывание)</option>
+          <option value="createdAtAsc">По дате создания (возрастание)</option>
+          <option value="createdAtDesc">По дате создания (убывание)</option>
+          <option value="dueDateAsc">По дате дедлайна (возрастание)</option>
+          <option value="dueDateDesc">По дате дедлайна (убывание)</option>
           <option value="title">По названию</option>
           <option value="priority">По приоритету</option>
         </select>
@@ -281,7 +288,8 @@ onMounted(async () => {
                 <th class="px-4 py-2">Название</th>
                 <th class="px-4 py-2">Описание</th>
                 <th class="px-4 py-2">Приоритет</th>
-                <th class="px-4 py-2">Дата</th>
+                <th class="px-4 py-2">Создано</th>
+                <th class="px-4 py-2">Дедлайн</th>
                 <th class="px-4 py-2">Исполнитель</th>
                 <th class="px-4 py-2">Статус</th>
                 <th class="px-4 py-2">Действия</th>
@@ -296,6 +304,7 @@ onMounted(async () => {
                     {{ task.Priority }}
                   </span>
                 </td>
+                <td class="px-4 py-2 text-gray-600">{{ formatDate(task.CreatedAt) }}</td>
                 <td class="px-4 py-2 text-gray-600">{{ formatDate(task.DueDate) }}</td>
                 <td class="px-4 py-2 text-gray-600">
                   <div class="flex items-center space-x-3">
@@ -378,10 +387,25 @@ onMounted(async () => {
                     placeholder="Описание"
                     class="w-full mb-4 px-3 py-4 border rounded h-36"
                     required></textarea>
-          <input v-model="form.DueDate"
-                 type="date"
-                 class="w-full mb-2 px-3 py-2 border rounded"
-                 required />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="createdAt" class="block text-gray-700 mb-1">Дата создания</label>
+              <input v-model="form.CreatedAt"
+                     id="createdAt"
+                     type="date"
+                     class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-600 cursor-not-allowed"
+                     required
+                     readonly />
+            </div>
+            <div>
+              <label for="dueDate" class="block text-gray-700 mb-1">Дедлайн</label>
+              <input v-model="form.DueDate"
+                     id="dueDate"
+                     type="date"
+                     class="w-full px-3 py-2 border rounded"
+                     required />
+            </div>
+          </div>
           <select v-model="form.Priority"
                   class="w-full mb-2 px-3 py-2 border rounded">
             <option value="Обычный">Обычный</option>

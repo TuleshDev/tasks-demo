@@ -5,6 +5,7 @@ export function mapTask(raw: any): Task {
     Id: raw.id,
     Title: raw.title,
     Description: raw.description,
+    CreatedAt: raw.createdAt,
     DueDate: raw.dueDate,
     IsCompleted: raw.isCompleted,
     OwnerId: raw.ownerId,

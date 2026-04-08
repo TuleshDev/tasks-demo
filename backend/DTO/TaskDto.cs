@@ -8,6 +8,8 @@ namespace Backend.DTOs
 
         public required string Description { get; set; }
 
+        public DateTime CreatedAt { get; set; }
+
         public DateTime DueDate { get; set; }
 
         public bool IsCompleted { get; set; }
